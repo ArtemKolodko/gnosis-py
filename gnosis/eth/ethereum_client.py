@@ -901,7 +901,7 @@ class EthereumClient:
         self.parity: ParityManager = ParityManager(self, slow_provider_timeout)
         self.http_session = requests.Session()
         try:
-            if int(self.w3.net.version) != 1:
+            if int(self.w3.net.version, 16) != 1:
                 self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
             # For tests using dummy connections (like IPC)
         except (ConnectionError, FileNotFoundError):
