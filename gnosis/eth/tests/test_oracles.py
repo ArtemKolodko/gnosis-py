@@ -8,7 +8,7 @@ from eth_account import Account
 from .. import EthereumClient
 from ..oracles import (BalancerOracle, CannotGetPriceFromOracle, CurveOracle,
                        KyberOracle, MooniswapOracle, SushiswapOracle,
-                       UniswapOracle, UniswapV2Oracle)
+                       UniswapOracle, UniswapV2Oracle, YearnOracle)
 from .ethereum_test_case import EthereumTestCaseMixin
 from .utils import just_test_if_mainnet_node
 
@@ -162,14 +162,37 @@ class TestCurveOracle(EthereumTestCaseMixin, TestCase):
         curve_oracle = CurveOracle(ethereum_client)
         curve_token_address = '0xC25a3A3b969415c80451098fa907EC722572917F'  # Curve.fi DAI/USDC/USDT/sUSD
 
-        price = curve_oracle.get_pool_token_price(curve_token_address)
+        price = curve_oracle.get_pool_usd_token_price(curve_token_address)
         self.assertAlmostEqual(price, 1., delta=0.5)
 
-        with self.assertRaisesMessage(CannotGetPriceFromOracle, 'It is not a curve pool token'):
-            curve_oracle.get_pool_token_price(gno_token_mainnet_address)
+        error_message = 'It is not a curve pool token'
+        with self.assertRaisesMessage(CannotGetPriceFromOracle, error_message):
+            curve_oracle.get_pool_usd_token_price(gno_token_mainnet_address)
 
-        with self.assertRaisesMessage(CannotGetPriceFromOracle, 'It is not a curve pool token'):
-            curve_oracle.get_pool_token_price(Account.create().address)
+        with self.assertRaisesMessage(CannotGetPriceFromOracle, error_message):
+            curve_oracle.get_pool_usd_token_price(Account.create().address)
+
+
+class TestYearnOracle(EthereumTestCaseMixin, TestCase):
+    def test_get_pool_token_price(self):
+        mainnet_node = just_test_if_mainnet_node()
+        ethereum_client = EthereumClient(mainnet_node)
+        yearn_oracle = YearnOracle(ethereum_client)
+        yearn_token_address = '0x5533ed0a3b83F70c3c4a1f69Ef5546D3D4713E44'  # Yearn Curve.fi DAI/USDC/USDT/sUSD
+        iearn_token_address = '0x16de59092dAE5CcF4A1E6439D611fd0653f0Bd01'  # iearn DAI
+
+        price = yearn_oracle.get_pool_usd_token_price(yearn_token_address)
+        self.assertAlmostEqual(price, 1., delta=0.5)
+
+        price = yearn_oracle.get_pool_usd_token_price(iearn_token_address)
+        self.assertAlmostEqual(price, 1., delta=0.5)
+
+        error_message = 'It is not a Yearn yVault'
+        with self.assertRaisesMessage(CannotGetPriceFromOracle, error_message):
+            yearn_oracle.get_pool_usd_token_price(gno_token_mainnet_address)
+
+        with self.assertRaisesMessage(CannotGetPriceFromOracle, error_message):
+            yearn_oracle.get_pool_usd_token_price(Account.create().address)
 
 
 class TestBalancerOracle(EthereumTestCaseMixin, TestCase):
