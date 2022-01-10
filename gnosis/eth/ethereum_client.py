@@ -744,7 +744,7 @@ class ParityManager:
             logger.warning('Problem decoding trace: %s - Retrying', exc)
             return self._decode_traces(self.slow_w3.parity.traceBlock(block_identifier))
 
-    def trace_blocks(self, block_identifiers: List[BlockIdentifier]) -> List[List[Dict[str, Any]]]:
+    def trace_blocks(self, block_identifiers: List[BlockIdentifier], addresses: Sequence[str]) -> List[List[Dict[str, Any]]]:
         if not block_identifiers:
             return []
         payload = [{'id': i, 'jsonrpc': '2.0', 'method': 'trace_block',
@@ -752,12 +752,17 @@ class ParityManager:
                    for i, block_identifier in enumerate(block_identifiers)]
         results = self.ethereum_client.http_session.post(self.ethereum_node_url, json=payload).json()
         traces = []
+        addresses_set = set(list(map(str.lower, addresses)))
+
         for block_identifier, result in zip(block_identifiers, results):
             if 'result' not in result:
                 message = f'Problem calling batch `trace_block` on block={block_identifier}, result={result}'
                 logger.error(message)
                 raise ValueError(message)
             raw_tx = result['result']
+            if raw_tx:
+                raw_tx = [p for p in raw_tx if(p.get('action', {}).get('from', '').lower() in addresses_set or p.get('action', {}).get('to', '').lower() in addresses_set)]
+
             if raw_tx:
                 try:
                     decoded_traces = self._decode_traces(raw_tx)
