@@ -27,6 +27,7 @@ from .exceptions import (CannotEstimateGas, CannotRetrieveSafeInfoException,
 from .safe_create2_tx import SafeCreate2Tx, SafeCreate2TxBuilder
 from .safe_creation_tx import InvalidERC20Token, SafeCreationTx
 from .safe_tx import SafeTx
+import time
 
 logger = getLogger(__name__)
 
@@ -559,6 +560,7 @@ class Safe:
             master_copy = self.retrieve_master_copy_address()
             fallback_handler = self.retrieve_fallback_handler()
 
+            time_start = time.time_ns()
             results = self.ethereum_client.batch_call([
                 contract.functions.getModules(),  # Tuple of (addresses, next) from v1.1.1 and for old Safes just a list
                 contract.functions.nonce(),
@@ -567,6 +569,7 @@ class Safe:
                 contract.functions.VERSION(),
             ], from_address=self.address, block_identifier=block_identifier)
             modules, nonce, owners, threshold, version = results
+            logger.info("--------- batch_call %d %s", (time.time_ns() - time_start), version)
             if len(modules) == 10:  # Pagination is enabled and by default is 10
                 modules = self.retrieve_modules()
             return SafeInfo(self.address, fallback_handler, master_copy, modules, nonce, owners, threshold, version)
